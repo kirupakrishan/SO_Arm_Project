@@ -1,0 +1,35 @@
+# Shared by every lerobot_real node (follower_bridge, real_to_sim).
+/**:
+  ros__parameters:
+    port: /dev/ttyACM0
+    robot_id: vellayan            # -> ~/.cache/huggingface/lerobot/calibration/robots/so101_follower/vellayan.json
+    calibration_dir: ""           # empty = LeRobot default location
+    connect_attempts: 10          # retries (1 s apart) if the serial port is not ready yet
+    # Order: shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper
+    # Flip a sign / add an offset if a real joint moves opposite to / offset from RViz.
+    joint_signs:       [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    joint_offsets_deg: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    gripper_closed_rad: -0.174533  # URDF angle that maps to LeRobot gripper 0
+    gripper_open_rad: 1.74533      # URDF angle that maps to LeRobot gripper 100
+
+# sim -> real
+lerobot_follower_bridge:
+  ros__parameters:
+    rate_hz: 30.0
+    max_velocity_deg_s: 90.0      # per-joint speed cap for the real arm
+    max_gripper_pct_s: 150.0
+    command_timeout_s: 1.0        # hold pose if /joint_states goes quiet
+    dry_run: false                # true = torque off, only publish /lerobot/joint_states
+    disable_torque_on_exit: true  # torque off after the rest move (arm sits on its stops)
+    go_to_rest_on_exit: true      # Ctrl+C -> slowly move to rest pose, then disconnect
+    rest_speed_deg_s: 30.0
+    rest_pose_file: ~/.config/lerobot_real/rest_pose.yaml  # written by `go_to_rest --record`
+    input_topic: /joint_states
+    feedback_topic: /lerobot/joint_states
+
+# real -> sim
+lerobot_real_to_sim:
+  ros__parameters:
+    rate_hz: 30.0
+    output_topic: /joint_states
+    clamp_to_urdf_limits: false   # true = never show RViz past the URDF joint limits

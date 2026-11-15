@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>lerobot_real</name>
+  <version>0.1.0</version>
+  <description>Bridges ROS 2 /joint_states (RViz sim / joint_state_publisher) to a real SO-101 arm via LeRobot.</description>
+  <maintainer email="kirupa_krishan@todo.todo">kirupa_krishan</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>arm_movement</exec_depend>
+  <!-- lerobot itself is provided by the `lerobot` conda env (see README). -->
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
