@@ -26,7 +26,7 @@ setup(
 
         # install launch files
         (os.path.join('share', package_name, 'launch'),
-         ['launch/arm_viz.launch.py']),
+         ['launch/arm_viz.launch.py','launch/arm_move.launch.py']),
 
         #install rviz config file
         (os.path.join('share', package_name, 'resource'),
@@ -47,6 +47,7 @@ setup(
         'console_scripts': [
             'forward_kinematics = arm_movement.forward_kine:main',
             'inverse_kinematics = arm_movement.inv_kine:main',
+            'inverse_diff_kinematics = arm_movement.inv_diff_kine:main',
         ],
     },
 )
