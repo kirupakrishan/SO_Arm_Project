@@ -1,0 +1,55 @@
+# Gamepad teleop for the SO-101. Indices follow the ROS 2 Humble `joy` package
+# (SDL2 game-controller mapping: same layout for Xbox, PlayStation, most USB pads).
+#   axes:    0 LX  1 LY  2 RX  3 RY  4 LT  5 RT      (stick left/up = +1)
+#   buttons: 0 A  1 B  2 X  3 Y  4 back  5 guide  6 start  7 L3  8 R3  9 LB  10 RB
+#            11 dpad-up  12 dpad-down  13 dpad-left  14 dpad-right
+# Run `ros2 topic echo /joy` and press things to confirm on your pad.
+# -1 = unmapped. Flip `scale` sign if a joint moves the wrong way.
+
+joy_node:
+  ros__parameters:
+    device_id: 0
+    deadzone: 0.05            # joy's own deadzone (teleop applies `deadzone` below too)
+    autorepeat_rate: 20.0     # keep publishing while a stick is held (teleop has a stale-input timeout)
+    coalesce_interval_ms: 1
+
+arm_joy_teleop:
+  ros__parameters:
+    rate_hz: 30.0
+    start_mode: joint         # joint | cartesian  (START toggles)
+    speed_scale: 0.5          # 0.1 .. 1.0, dpad up/down changes it at runtime
+    deadzone: 0.1
+    joy_timeout_s: 0.5        # no /joy for this long -> stop
+    require_deadman: true
+    max_joint_vel_rad_s: 0.8  # at speed_scale 1.0 (follower_bridge also caps at 90 deg/s)
+    max_gripper_vel_rad_s: 1.5
+    max_linear_vel_m_s: 0.08  # Cartesian tip speed at speed_scale 1.0
+    ik_damping: 0.02
+    # shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper (rad)
+    home_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    seed_timeout_s: 2.0       # wait this long for /lerobot/joint_states before using home_pose
+    seed_topic: /lerobot/joint_states
+    output_topic: /joint_states
+    joy_topic: /joy
+
+    buttons:
+      deadman: 9              # LB - hold to move
+      mode: 6                 # START - joint <-> cartesian
+      home: 2                 # X (hold, with deadman) - glide to home_pose
+      speed_up: 11            # dpad up
+      speed_down: 12          # dpad down
+
+    joint:                    # joint mode: one channel per joint (axis and/or button pair)
+      shoulder_pan:  {axis: 0, scale: 1.0}
+      shoulder_lift: {axis: 1, scale: 1.0}
+      elbow_flex:    {axis: 3, scale: 1.0}
+      wrist_flex:    {axis: 2, scale: 1.0}
+      wrist_roll:    {button_pos: 14, button_neg: 13}   # dpad right / left
+      gripper:       {button_pos: 1, button_neg: 0}     # B open / A close
+
+    cartesian:                # cartesian mode: gripper tip velocity in the world frame
+      x: {axis: 1, scale: 1.0}            # left stick up/down
+      y: {axis: 0, scale: 1.0}            # left stick left/right
+      z: {axis: 3, scale: 1.0}            # right stick up/down
+      wrist_flex: {axis: 2, scale: 1.0}   # right stick left/right
+      # wrist_roll and gripper use the `joint:` mapping in both modes

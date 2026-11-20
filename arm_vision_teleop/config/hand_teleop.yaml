@@ -1,0 +1,87 @@
+# Webcam hand teleop for the SO-101.
+# Robot world frame (URDF): +x forward from the base, +y to the robot's left, +z up.
+# Defaults assume you sit BEHIND the robot, facing the same way, with the laptop
+# camera in front of you (mirror: true = selfie view, your right is image right).
+# If an axis moves the wrong way, flip its *_sign.
+
+camera_bridge:
+  ros__parameters:
+    source: tcp          # tcp = frames from windows/cam_streamer.py | local = /dev/videoN
+    port: 5005
+    bind_address: 0.0.0.0
+    device: 0            # source: local only
+    width: 640
+    height: 480
+    fps: 30.0
+    image_topic: /camera/image_raw
+
+hand_tracker:
+  ros__parameters:
+    mode: hand                    # hand | arm  (set by the launch arg mode:=...)
+    pose_model_path: ~/.cache/arm_vision_teleop/pose_landmarker_full.task  # arm mode
+    min_visibility: 0.5           # arm mode: elbow/wrist must be at least this visible
+    arm_smoothing_alpha: 0.4      # arm mode smoothing (lower = smoother, laggier)
+    image_topic: /camera/image_raw
+    model_path: ~/.cache/arm_vision_teleop/hand_landmarker.task   # auto-downloaded
+    mirror: true
+    min_confidence: 0.6
+    smoothing_alpha: 0.5          # 1.0 = no smoothing, lower = smoother but laggier
+    pinch_closed: 0.25            # thumb-index gap (in hand sizes) that means fully closed
+    pinch_open: 0.9               # ... and fully open
+    curl_ratio: 1.3               # finger counts as curled when tip-wrist < ratio * MCP-wrist
+    engage_debounce_frames: 3     # frames a fist/open change must persist
+    show_window: true             # preview window (launch arg image_view:=false hides it)
+    publish_debug_image: true     # /hand/debug_image, only drawn while something subscribes
+
+hand_follower:
+  ros__parameters:
+    mode: hand                    # hand | arm  (set by the launch arg mode:=...)
+    rate_hz: 30.0
+    hand_timeout_s: 0.3           # no hand data for this long -> pause
+    # Hand motion -> tip motion (robot axis 0=x 1=y 2=z, sign flips direction)
+    gain_lateral: 0.30            # m of tip travel per full image width
+    lateral_axis: 1
+    lateral_sign: -1.0            # hand to your right -> tip to robot's right (-y)
+    gain_vertical: 0.30           # m per full image height
+    vertical_axis: 2
+    vertical_sign: -1.0           # hand up -> tip up
+    gain_depth: 0.15              # m per e-fold (~2.7x) change in hand size
+    depth_axis: 0
+    depth_sign: 1.0               # hand toward the camera -> tip forward
+    # Tip stays inside this box (m, world frame); the default keeps it above the table.
+    workspace_min: [0.05, -0.35, 0.03]
+    workspace_max: [0.45, 0.35, 0.45]
+    max_lead_m: 0.10              # target may run at most this far ahead of the tip
+    kp: 4.0
+    max_linear_vel_m_s: 0.15
+    max_joint_vel_rad_s: 1.0      # follower_bridge also caps the real arm at 90 deg/s
+    max_gripper_vel_rad_s: 2.0
+    ik_damping: 0.02
+    position_tolerance_m: 0.003
+    control_gripper: true
+    home_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    seed_timeout_s: 2.0
+    seed_topic: /lerobot/joint_states
+    output_topic: /joint_states
+
+    # --- mode: arm (your elbow = the robot's base, absolute mapping) ---
+    arm:
+      anchor_m: [0.0, 0.0, 0.12]   # robot point the tip is placed around (shoulder height)
+      # Robot x, y, z <- camera axis of your forearm direction (camera: x right, y down,
+      # z away). Default: forearm pointing at the camera = forward, up = up, your
+      # right = robot's right (you sit behind the robot, facing the camera).
+      axis_map: ['-z', '-x', '-y']
+      reach_source: elbow_angle    # elbow_angle | fixed (use fixed if your shoulder is out of view)
+      reach_min_m: 0.22            # tip distance from anchor with the elbow fully bent (closer is
+                                   # mostly unreachable with the wrist straight: joint limits)
+      reach_max_m: 0.40            # ...and with the arm straight
+      elbow_bent_deg: 60.0
+      elbow_straight_deg: 170.0
+      reach_fixed_m: 0.30          # used when reach_source: fixed or shoulder not visible
+      control_wrist: true
+      wrist_flex_sign: 1.0         # flip if the robot wrist bends the opposite way to yours
+      wrist_flex_gain: 1.0
+      wrist_flex_offset: 0.0       # rad
+      wrist_roll_sign: 1.0
+      wrist_roll_gain: 1.0
+      wrist_roll_offset: 0.0       # rad; palm facing the camera = this robot wrist_roll
